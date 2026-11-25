@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><img alt="Download" src="https://img.shields.io/github/v/release/stealer0002/lumora?label=download&style=for-the-badge&color=e8a54b"></a>
+  <a href="../../releases/latest"><img alt="Download" src="https://img.shields.io/badge/download-v1.3.0-e8a54b?style=for-the-badge"></a>
   <img alt="Horizon shader API 0.2" src="https://img.shields.io/badge/Horizon-shader%20API%200.2-7a5cff?style=for-the-badge">
   <img alt="Written in WGSL" src="https://img.shields.io/badge/written%20in-WGSL-3aa7a3?style=for-the-badge">
   <img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-5b8def?style=for-the-badge">
