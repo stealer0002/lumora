@@ -67,14 +67,66 @@ The name blends *luminous* and *aurora*.
 
 ## Install
 
-1. Download **`lumora-1.3.0.hshader`** from the [latest release](../../releases/latest).
-2. Put it in your game's `shaderpacks/` folder, or drag it onto the Horizon launcher window.
-3. In the game, open **Options > Video Settings > Shaders** and pick **Lumora**.
-4. Open **Shader Options** and choose a quality preset. Everything else is tuned already.
+Lumora is a **Horizon shader pack** (a `.hshader` file). It runs in [Horizon](https://playhorizon.dev),
+the Rust Minecraft client, not in Java Edition with Iris or OptiFine.
 
-**Requires** Horizon with shader API 0.2: the Nightly of **2026-11-18 or later**. Earlier builds
-refuse the pack. Shader API 0.2 is still marked experimental by Horizon, so a future Nightly may
-need an update of the pack; new releases will follow.
+### What you need
+
+| | |
+| --- | --- |
+| **Game** | Horizon, **Nightly 2026-11-18 or newer** (shader API 0.2) |
+| **Minecraft version** | 26.3, the version Horizon plays |
+| **GPU** | any GPU that runs Horizon; Low for older or integrated GPUs, ray tracing only on GPUs with ray queries (RTX-class) |
+| **File** | `lumora-1.3.0.hshader`, about 66 KB |
+
+Horizon ships only Nightly builds, and the launcher installs the newest one by itself. If you
+installed Horizon a while ago, open the launcher once so it updates before you add Lumora.
+
+### Step by step
+
+**1. Download the pack.**
+Go to the [latest release](../../releases/latest) and download **`lumora-1.3.0.hshader`**.
+Don't unzip it and don't rename it: the game reads the file as it is.
+
+**2. Add it to Horizon.** Pick one of these:
+
+- **Drag and drop (easiest):** open the Horizon launcher, select the instance you play, and drag
+  `lumora-1.3.0.hshader` onto the launcher window. It goes straight into that instance's
+  `shaderpacks/` folder.
+- **From the game:** go to **Options > Video Settings > Shaders > Shader Packs...**, click
+  **Open Pack Folder**, and copy `lumora-1.3.0.hshader` into the folder that opens.
+- **From a terminal:** `horizon-launcher packs add lumora-1.3.0.hshader`, then
+  `horizon-launcher packs on Lumora --kind shader`.
+
+**3. Turn it on.**
+Start the game and go to **Options > Video Settings > Shaders > Shader Packs...**. Lumora is in
+the list, marked **(Horizon)**. Click it once to turn it on (click it again to turn it off). Only
+one shader pack runs at a time.
+
+**4. Choose a preset.**
+Open **Shader Options...** at the top of the same page. You land on Lumora's start page: pick a
+**Quality preset** (see the table below). High is the default; start lower on a laptop or an
+older GPU. Every option on the other pages (Lighting, Surfaces, Sky, Weather, Water, Picture) has
+a one-line description: hover it to read what it does.
+
+**5. Play.**
+The first load of a world with Lumora takes a second or two longer while the pack is built.
+
+### Updating
+
+Download the new `.hshader` from the releases page, add it the same way, and pick the new version
+in the Shader Packs list. You can delete the old file from `shaderpacks/` afterwards.
+
+### Troubleshooting
+
+| What you see | What to do |
+| --- | --- |
+| Lumora is not in the Shader Packs list | Check that the file is in the `shaderpacks/` folder of the instance you are playing, and that it still ends in `.hshader`. |
+| The chat says the pack *needs shader API 0.2* or lists problems in the pack | Your Horizon is older than the 2026-11-18 Nightly. Open the launcher and let it update, then try again. |
+| Low frame rate | Pick a lower preset. The biggest gains: **Shadow sharpness** at 2048, then **Shadows** off. Keep Ray tracing **Off**. |
+| Ray tracing does nothing | Your GPU or Horizon backend has no ray queries. Lumora falls back to its screen-space effects; leave Ray tracing Off. |
+| The picture is too bright, too dark or too colourful | **Picture** page: Brightness and Colour. **Sky** page: Haze. |
+| Something looks wrong | Open an [issue](../../issues) with a screenshot taken with **F3** open (it shows your position and GPU) and your preset. |
 
 ## What it does
 
