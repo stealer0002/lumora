@@ -1,0 +1,684 @@
+schema = 1
+id = "lumora"
+name = "Lumora"
+version = "1.3.0"
+api = "0.2"
+description = "Luminous, a little fantastic and easy on the eyes: warm golden light with cool lilac shade, crisp shadows, volumetric clouds, weather you can tell apart, clear water with caustics, moonlit nights and the northern lights, a Rift in the sky of the End, coloured torchlight and stone, wood and metal that each take the light their own way."
+authors = ["stealer0002"]
+license = "MIT"
+shared = ["common.wgsl"]
+
+[sky]
+file = "sky.wgsl"
+name = "Sky and stars"
+reads = ["sky_memory"]
+# The pack draws its own stars (with a Milky Way) and its own volumetric clouds; the sun and the
+# moon stay the game's.
+stars = false
+clouds = false
+files = ["memory.wgsl"]
+
+[vertex]
+file = "vertex.wgsl"
+
+[material]
+file = "material.wgsl"
+name = "Terrain"
+files = ["memory.wgsl", "lighting.wgsl", "relief.wgsl", "reflections.wgsl", "ray_light.wgsl"]
+reads = ["sky_memory", "reflected_sky"]
+
+[entity]
+file = "entity.wgsl"
+name = "Mobs and chests"
+files = ["lighting.wgsl"]
+
+[weather]
+file = "weather.wgsl"
+
+[frame]
+# The pack fogs what it lights, with the same air the sky is made of.
+fog = "pack"
+
+[displacement]
+distance = 12.0
+cells = 12
+option = "geometry_relief"
+
+[ray_tracing]
+
+[reflection]
+option = "water_reflections"
+
+[shadow]
+resolution = 4096
+distance = 128.0
+option = "shadows"
+resolution_option = "shadow_resolution"
+distance_option = "shadow_distance"
+
+# The sky the water mirrors, with its clouds (sky_map.wgsl): made before the world draws, read by
+# the terrain's water.
+[[resource]]
+name = "reflected_sky"
+format = "rgba16float"
+size = [256, 96]
+keep = "view"
+
+# How cold it has been round the camera lately, for the northern lights (sky_memory.wgsl).
+[[resource]]
+name = "sky_memory"
+buffer = 32
+element = "f32"
+keep = "view"
+
+[[before_world]]
+file = "sky_memory.wgsl"
+dispatch = [1, 1, 1]
+workgroup = [1, 1, 1]
+writes = ["sky_memory"]
+
+[[before_world]]
+file = "sky_map.wgsl"
+files = ["memory.wgsl", "clouds_march.wgsl"]
+dispatch = [256, 96, 1]
+workgroup = [16, 8, 1]
+writes = ["reflected_sky"]
+
+# The clouds' light and how much sky shows through them, together, at half size; kept so the next
+# frame can build on it (post/clouds.wgsl).
+reads = ["sky_memory"]
+
+[[resource]]
+name = "cloud_kept"
+format = "rgba16float"
+scale = 0.5
+keep = "view"
+
+[[post]]
+file = "post/clouds.wgsl"
+files = ["memory.wgsl", "clouds_march.wgsl"]
+name = "Clouds"
+output = "cloud_kept"
+reads = ["sky_memory", "cloud_kept_previous"]
+
+[[post]]
+file = "post/fireflies.wgsl"
+name = "Clouds over the sky, fireflies"
+reads = ["sky_memory", "cloud_kept"]
+files = ["memory.wgsl"]
+
+[[post]]
+file = "post/shafts.wgsl"
+name = "Light shafts"
+output = "shafts"
+scale = 0.5
+
+# Half-resolution diffuse light. In path mode alpha stores view depth for reprojection.
+reads = ["sky_memory"]
+files = ["memory.wgsl"]
+
+[[resource]]
+name = "bounce_target"
+format = "rgba16float"
+scale = 0.5
+keep = "view"
+
+[[post]]
+file = "post/bounce.wgsl"
+name = "Bounce light"
+files = ["ray_light.wgsl", "post/path_gi.wgsl"]
+output = "bounce_target"
+reads = ["bounce_target_previous"]
+
+[[post]]
+file = "post/ssao.wgsl"
+files = ["post/gtao.wgsl"]
+name = "Contact shade"
+output = "ao_target"
+scale = 0.5
+
+[[post]]
+file = "post/bloom.wgsl"
+name = "Glow: bright"
+output = "bloom_half"
+scale = 0.5
+
+[[post]]
+file = "post/bloom_soft.wgsl"
+name = "Glow: soft"
+output = "bloom_quarter"
+scale = 0.25
+
+[[post]]
+file = "post/bloom_wide.wgsl"
+name = "Glow: wide"
+output = "bloom_wide"
+scale = 0.25
+
+[[post]]
+file = "post/composite.wgsl"
+name = "Atmosphere and colour"
+files = ["memory.wgsl", "reflections.wgsl", "post/flare.wgsl", "post/path_upsample.wgsl"]
+reads = ["sky_memory", "cloud_kept", "bounce_target"]
+
+[[post]]
+file = "post/dof.wgsl"
+name = "Depth of field"
+
+[[post]]
+file = "post/motion.wgsl"
+name = "Camera motion blur"
+
+[[post]]
+file = "post/fxaa.wgsl"
+name = "Smooth edges"
+
+[tonemap]
+file = "tonemap.wgsl"
+
+# The game's own fireflies (from firefly bushes) light what is round them.
+[[particle_lights]]
+particles = ["firefly"]
+color = [0.8, 1.0, 0.35]
+reach = 3.0
+
+[[materials]]
+id = 10
+sprites = ["block/*_leaves", "block/vine", "block/*_leaves_*"]
+
+[[materials]]
+id = 11
+sprites = ["block/short_grass", "block/fern", "block/tall_dry_grass", "block/short_dry_grass", "block/*_sapling", "block/dandelion", "block/poppy", "block/*_tulip", "block/oxeye_daisy", "block/cornflower", "block/allium", "block/azure_bluet", "block/blue_orchid", "block/lily_of_the_valley", "block/bush", "block/firefly_bush*", "block/sweet_berry_bush_*", "block/wheat_stage*", "block/carrots_stage*", "block/potatoes_stage*", "block/beetroots_stage*", "block/dead_bush"]
+
+# Lit like plants, but kept still: they lie flat or stand in columns.
+[[materials]]
+id = 13
+sprites = ["block/sugar_cane", "block/wildflowers*", "block/pink_petals*", "block/leaf_litter*"]
+
+# The two halves of tall plants: the lower bends from its roots, the upper further.
+[[materials]]
+id = 14
+sprites = ["block/tall_grass_bottom", "block/large_fern_bottom", "block/lilac_bottom", "block/rose_bush_bottom", "block/peony_bottom", "block/sunflower_bottom"]
+
+[[materials]]
+id = 15
+sprites = ["block/tall_grass_top", "block/large_fern_top", "block/lilac_top", "block/rose_bush_top", "block/peony_top", "block/sunflower_top"]
+
+# Ores: their coloured flecks glow faintly in the dark.
+[[materials]]
+id = 16
+sprites = ["block/*_ore", "block/ancient_debris_side", "block/ancient_debris_top"]
+
+# Stone, wood and metal: rough, warm and glossy (material.wgsl).
+[[materials]]
+id = 20
+sprites = ["block/stone", "block/cobblestone", "block/mossy_cobblestone", "block/deepslate", "block/deepslate_top", "block/cobbled_deepslate", "block/*_deepslate", "block/andesite", "block/diorite", "block/granite", "block/polished_*", "block/*stone_bricks", "block/tuff*", "block/blackstone*", "block/basalt*", "block/calcite", "block/smooth_stone*"]
+
+[[materials]]
+id = 21
+sprites = ["block/*_planks", "block/*_log", "block/*_log_top", "block/stripped_*", "block/*_stem", "block/*_stem_top", "block/bamboo_block*", "block/crafting_table*", "block/bookshelf", "block/barrel*", "block/*_trapdoor", "block/*_door_*"]
+
+[[materials]]
+id = 22
+sprites = ["block/iron_block", "block/gold_block", "block/copper_block", "block/*_copper", "block/*copper*", "block/iron_bars", "block/anvil*", "block/chain", "block/lantern", "block/soul_lantern", "block/netherite_block"]
+
+[[materials]]
+id = 23
+sprites = ["block/glass", "block/tinted_glass", "block/*_stained_glass", "block/glass_pane_top", "block/*_stained_glass_pane_top"]
+
+[[materials]]
+id = 12
+sprites = ["block/water_still", "block/water_flow"]
+
+[[lights]]
+color = [1.0, 0.62, 0.3]
+blocks = ["torch", "wall_torch", "lantern", "campfire", "fire", "jack_o_lantern", "furnace", "smoker", "blast_furnace", "candle*", "*_candle*"]
+
+[[lights]]
+color = [0.35, 0.75, 1.0]
+blocks = ["soul_*"]
+
+[[lights]]
+color = [1.0, 0.2, 0.12]
+blocks = ["redstone_torch", "redstone_wall_torch", "redstone_lamp", "redstone_ore", "deepslate_redstone_ore"]
+
+[[lights]]
+color = [1.0, 0.5, 0.15]
+blocks = ["lava", "magma_block"]
+
+[[lights]]
+color = [0.55, 0.9, 1.0]
+blocks = ["sea_lantern", "conduit", "beacon", "glow_lichen"]
+
+[[lights]]
+color = [0.8, 0.45, 1.0]
+blocks = ["amethyst_cluster", "*_amethyst_bud", "crying_obsidian", "respawn_anchor", "end_rod"]
+
+[[lights]]
+color = [1.0, 0.85, 0.55]
+blocks = ["glowstone", "shroomlight", "*_froglight", "beehive", "bee_nest"]
+
+[[options]]
+id = "shadows"
+name = "Shadows"
+description = "Sun and moon shadows. Turning them off is the biggest speed gain."
+type = "bool"
+default = true
+
+[[options]]
+id = "shadow_resolution"
+name = "Shadow sharpness"
+description = "Detail of the shadow map. 4096 looks good; 8192 is sharpest but costs a lot."
+type = "choice"
+values = ["2048", "4096", "6144", "8192"]
+default = "4096"
+
+[[options]]
+id = "shadow_distance"
+name = "Shadow range"
+description = "How far shadows reach, in blocks. 64 packs the same detail into the nearest ground: the sharpest shadows close by; 192 reaches farthest but softer."
+type = "choice"
+values = ["64", "96", "128", "192"]
+default = "128"
+
+[[options]]
+id = "sun_strength"
+name = "Sunlight"
+description = "How strong direct sunlight is. Lower is softer and calmer."
+type = "float"
+default = 2.0
+min = 1.0
+max = 4.0
+step = 0.1
+
+[[options]]
+id = "saturation"
+name = "Colour"
+description = "How vivid colours are. 1 is natural; the pack also adapts colour to time and weather."
+type = "float"
+default = 1.05
+min = 0.6
+max = 1.8
+step = 0.05
+
+[[options]]
+id = "exposure"
+name = "Brightness"
+description = "Overall brightness of the picture."
+type = "float"
+default = 1.0
+min = 0.5
+max = 2.0
+step = 0.05
+
+[[options]]
+id = "fog_density"
+name = "Haze"
+description = "How thick the distant haze and the night mist are. 0 turns them off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 3.0
+step = 0.1
+
+[[options]]
+id = "fireflies"
+name = "Fireflies"
+description = "Fireflies on warm, dry nights. 0 turns them off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "star_brightness"
+name = "Stars"
+description = "How bright the stars and the Milky Way are."
+type = "float"
+default = 0.8
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "glow"
+name = "Glow"
+description = "Soft glow round bright things: sun, lava, torches. 0 turns it off."
+type = "float"
+default = 0.35
+min = 0.0
+max = 1.5
+step = 0.05
+
+[[options]]
+id = "quality"
+name = "Quality preset"
+description = "Low: weak PCs (crisp shadows, clouds, glow, water mirror). Medium: average PCs (+ corner shading, sunbeams, light ripples, motion blur). High: good PCs (+ reflections, lens flare, background blur, parallax). Ultra: top PCs (more of everything, Accurate corner shading). Max: photorealism (+ soft shadow edges, bounce light). Shadow sharpness stays its own setting: 2048 helps weak PCs most."
+type = "choice"
+values = ["Low", "Medium", "High", "Ultra", "Max"]
+default = "High"
+
+[[options]]
+id = "clouds"
+name = "Clouds"
+description = "How much of the sky clouds cover on a fair day. 0 is a clear sky."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "god_rays"
+name = "Sunbeams"
+description = "Light shafts through trees and haze. 0 turns them off."
+type = "float"
+default = 0.6
+min = 0.0
+max = 2.5
+step = 0.1
+
+[[options]]
+id = "smooth_edges"
+name = "Anti-aliasing"
+description = "Smooths jagged edges (FXAA). Cheap; keep it on."
+type = "bool"
+default = true
+
+[[options]]
+id = "water_reflections"
+name = "Water mirror"
+description = "Water mirrors trees, hills and clouds round it."
+type = "bool"
+default = true
+
+[[options]]
+id = "waving"
+name = "Wind"
+description = "Leaves, grass and flowers sway, harder in gusts and storms."
+type = "bool"
+default = true
+
+[[options]]
+id = "rain_effects"
+name = "Wet ground"
+description = "Rain darkens and shines the ground, fills puddles and rings the water. 0 turns it off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "snow_cover"
+name = "Snow cover"
+description = "In snowy places, snow whitens what faces the sky. 0 turns it off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 1.0
+step = 0.1
+
+[[options]]
+id = "lightning"
+name = "Lightning"
+description = "Flashes light the clouds, sky and land in storms. 0 turns them off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "water_refraction"
+name = "Clear water"
+description = "See into water: the bottom, turquoise shallows, foam on the shore."
+type = "bool"
+default = true
+
+[[options]]
+id = "caustics"
+name = "Light ripples"
+description = "The web of light that water throws on what lies under it. 0 turns it off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "water_clarity"
+name = "Water clarity"
+description = "How far you see into water. 2 is crystal clear, 1 natural (deep rivers hide their bed), 0 murky."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "aurora"
+name = "Northern lights"
+description = "Green and violet curtains on clear nights in cold places. 0 turns them off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "shooting_stars"
+name = "Shooting stars"
+description = "Now and then a shooting star on clear nights."
+type = "bool"
+default = true
+
+[[options]]
+id = "rainbow"
+name = "Rainbows"
+description = "A rainbow opposite the sun as the rain ends. 0 turns them off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "labpbr"
+name = "LabPBR textures"
+description = "Only with a resource pack that ships LabPBR maps: bumps, gloss, metals, glowing pixels."
+type = "bool"
+default = true
+
+[[options]]
+id = "block_glow"
+name = "Glowing blocks"
+description = "Flames, lava, lamps and ores glow from their brightest pixels. 0 turns it off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "ambient_occlusion"
+name = "Corner shading"
+description = "Soft shade in corners, under walls and between blocks (Medium and up). 0 turns it off. Cheap."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "soft_shadows"
+name = "Soft shadow edges"
+description = "Max preset only. Shadows are sharp where they touch and soft at their ends, like real sunlight. 0 keeps them crisp."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "bounce_light"
+name = "Bounce light"
+description = "Max preset or full ray tracing. Lit surfaces pass their colour on to nearby walls: rooms fill with soft, warm light. 0 turns it off."
+type = "float"
+default = 1.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "temporal_clouds"
+name = "Smooth clouds"
+description = "Clouds build up over frames: smoother and faster. Turn off only if you see trails."
+type = "bool"
+default = true
+resets = "view"
+
+[[options]]
+id = "depth_of_field"
+name = "Focus blur"
+description = "Things much nearer or farther than the centre of the screen go soft, like a camera. 0 is off."
+type = "float"
+default = 0.0
+min = 0.0
+max = 2.0
+step = 0.1
+
+[[options]]
+id = "background_blur"
+name = "Background blur"
+description = "The far distance softens, like a camera focused on what is near. 0 is off."
+type = "float"
+default = 0.35
+min = 0.0
+max = 2.0
+step = 0.05
+
+[[options]]
+id = "other_skies"
+name = "Nether and End skies"
+description = "The End's violet sky with its Rift, and the Nether's shimmering heat."
+type = "bool"
+default = true
+
+[[options]]
+id = "motion_blur"
+name = "Motion blur"
+description = "Blur when turning or moving fast. 0 is off."
+type = "float"
+default = 0.5
+min = 0.0
+max = 1.0
+step = 0.05
+
+[[options]]
+id = "lens_flare"
+name = "Lens flare"
+description = "Light rings when looking toward the sun. 0 is off."
+type = "float"
+default = 0.5
+min = 0.0
+max = 1.0
+step = 0.05
+
+[[options]]
+id = "chromatic_aberration"
+name = "Colour fringes"
+description = "A camera-lens colour fringe toward the screen edges. 0 is off."
+type = "float"
+default = 0.15
+min = 0.0
+max = 1.0
+step = 0.05
+
+[[options]]
+id = "screen_reflections"
+name = "Reflections"
+description = "Glossy floors, metal, puddles, water and glass mirror what is on screen (water from Medium, the rest from High). Medium cost."
+type = "bool"
+default = true
+
+[[options]]
+id = "ray_mode"
+name = "Ray tracing"
+description = "Needs an RTX-class GPU. Reflections + shadows adds traced reflections and contact shadows (+1 ms). Full adds traced bounce light too (heaviest). Off uses the screen-space versions."
+type = "choice"
+values = ["Off", "Reflections + shadows", "Full (with bounce light)"]
+default = "Off"
+resets = "view"
+
+[[options]]
+id = "ao_method"
+name = "Corner shading style"
+description = "Classic is lighter on the GPU; Accurate gives deeper, more natural contact shade (Ultra and up; Max always uses it)."
+type = "choice"
+values = ["Classic", "Accurate"]
+default = "Classic"
+
+[[options]]
+id = "parallax"
+name = "Parallax depth"
+description = "Only with LabPBR textures: surfaces gain real-looking depth up close."
+type = "bool"
+default = true
+
+[[options]]
+id = "geometry_relief"
+name = "3D relief"
+description = "Only with LabPBR textures: nearby blocks get real 3D bumps. Heavy."
+type = "bool"
+default = false
+
+[[pages]]
+id = "main"
+name = "Lumora"
+description = "Start here: pick a quality preset, then fine-tune any page on the left."
+columns = 2
+items = ["quality", "ray_mode", "", "", "page:light", "page:surfaces", "page:sky", "page:weather", "page:water", "page:picture"]
+
+[[pages]]
+id = "light"
+name = "Lighting"
+description = "Sunlight, shadows, corner shading, bounce light and ray tracing."
+columns = 1
+items = ["sun_strength", "shadows", "shadow_resolution", "shadow_distance", "soft_shadows", "", "ambient_occlusion", "ao_method", "bounce_light", "block_glow", "", "ray_mode"]
+
+[[pages]]
+id = "surfaces"
+name = "Surfaces"
+description = "Reflections on glossy blocks, wind, and texture-pack features."
+columns = 1
+items = ["screen_reflections", "waving", "", "labpbr", "parallax", "geometry_relief"]
+
+[[pages]]
+id = "sky"
+name = "Sky"
+description = "Clouds, haze, sunbeams, stars and night lights."
+columns = 1
+items = ["clouds", "temporal_clouds", "god_rays", "fog_density", "", "star_brightness", "shooting_stars", "aurora", "rainbow", "fireflies", "other_skies"]
+
+[[pages]]
+id = "weather"
+name = "Weather"
+description = "Rain, snow and storms."
+columns = 1
+items = ["rain_effects", "snow_cover", "lightning"]
+
+[[pages]]
+id = "water"
+name = "Water"
+description = "How water looks from above and below."
+columns = 1
+items = ["water_refraction", "water_clarity", "water_reflections", "caustics"]
+
+[[pages]]
+id = "picture"
+name = "Picture"
+description = "Colour and brightness, then camera effects: motion blur, focus blur, flare."
+columns = 1
+items = ["saturation", "exposure", "glow", "", "motion_blur", "depth_of_field", "background_blur", "lens_flare", "chromatic_aberration", "smooth_edges"]

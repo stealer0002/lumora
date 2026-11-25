@@ -1,0 +1,15 @@
+name = "Lumora"
+summary = "A luminous, calm shader pack where every biome has its own light, air and weather. Low to photoreal Max, optional ray tracing."
+description = """
+Lumora is a native shader pack for Horizon, written from scratch in WGSL: a luminous Minecraft with one foot in fantasy, built to be easy on the eyes.
+
+Every biome has its own light, air and weather. Rain falls only where the biome allows it (deserts, savannas and badlands stay dry), cold biomes get snow and the northern lights, and walking between biomes fades the haze, the wet ground and the clouds instead of snapping.
+
+Volumetric clouds with a high cirrus veil, a sky of its own with stars and the Milky Way, clear water that mirrors the land and the sky, caustics, coloured torchlight, sun and moon shadows with soft edges on Max, bounce light, light shafts, rain you can tell apart from a storm, and an End with a breathing Rift in the sky.
+
+Five presets, from Low for older PCs to a photoreal Max, plus optional ray tracing (traced reflections and contact shadows, or full traced bounce light) on GPUs with ray queries.
+
+Created with Claude Opus 5.5 and Astra 6.2.
+"""
+authors = ["stealer0002"]
+license = "MIT"
